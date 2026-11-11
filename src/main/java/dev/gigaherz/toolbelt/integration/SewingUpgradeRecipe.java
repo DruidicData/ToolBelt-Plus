@@ -88,7 +88,7 @@ public class SewingUpgradeRecipe extends SewingRecipe
                 upgradedBelt.applyComponents(inputTag);
             }
             //noinspection DataFlowIssue
-            upgradedBelt = ToolBeltItem.setSlotsCount(upgradedBelt, Mth.clamp(size,2,9));
+            upgradedBelt = ToolBeltItem.setSlotsCount(upgradedBelt, Mth.clamp(size,2,ToolBeltItem.MAX_SLOTS));
         }
         return upgradedBelt;
     }

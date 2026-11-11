@@ -3,6 +3,7 @@ package dev.gigaherz.toolbelt.client;
 import com.google.common.collect.Lists;
 import dev.gigaherz.toolbelt.BeltFinder;
 import dev.gigaherz.toolbelt.ConfigData;
+import dev.gigaherz.toolbelt.belt.ToolBeltItem;
 import dev.gigaherz.toolbelt.client.radial.*;
 import dev.gigaherz.toolbelt.network.SwapItems;
 import net.minecraft.client.Minecraft;
@@ -10,6 +11,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -32,6 +34,11 @@ public class RadialMenuScreen extends Screen
 
     private boolean keyCycleBeforeL = false;
     private boolean keyCycleBeforeR = false;
+
+    /** Remembered between openings so the menu reopens on the last wheel used. */
+    private static int lastPage = 0;
+    private int currentPage = lastPage;
+    private int pageCount = 1;
 
     private boolean needsRecheckStacks = true;
     private final List<ItemStackRadialMenuItem> cachedMenuItems = Lists.newArrayList();
@@ -190,7 +197,24 @@ public class RadialMenuScreen extends Screen
         if (needsRecheckStacks)
         {
             cachedMenuItems.clear();
+
+            // Work out which belt slots can appear on the wheels. When empty slots are hidden,
+            // only filled slots are paged through, so every wheel stays full.
+            List<Integer> shownSlots = Lists.newArrayList();
             for (int i = 0; i < inventory.getSlots(); i++)
+            {
+                if (ConfigData.displayEmptySlots || inventory.getStackInSlot(i).getCount() > 0)
+                    shownSlots.add(i);
+            }
+
+            int perWheel = ToolBeltItem.SLOTS_PER_WHEEL;
+            pageCount = Math.max(1, (shownSlots.size() + perWheel - 1) / perWheel);
+            currentPage = Mth.clamp(currentPage, 0, pageCount - 1);
+            lastPage = currentPage;
+
+            int first = currentPage * perWheel;
+            int last = Math.min(first + perWheel, shownSlots.size());
+            for (int i : shownSlots.subList(first, last))
             {
                 ItemStack inSlot = inventory.getStackInSlot(i);
                 ItemStackRadialMenuItem item = new ItemStackRadialMenuItem(menu, i, inSlot, Component.translatable("text.toolbelt.empty"))
@@ -227,7 +251,7 @@ public class RadialMenuScreen extends Screen
         }
 
         boolean hasAddButton = false;
-        if (!ConfigData.displayEmptySlots && !cachedMenuItems.stream().allMatch(RadialMenuItem::isVisible) && inHand.getCount() > 0)
+        if (!ConfigData.displayEmptySlots && inHand.getCount() > 0 && hasEmptySlot())
         {
             hasAddButton = true;
         }
@@ -246,6 +270,62 @@ public class RadialMenuScreen extends Screen
         }
 
         menu.draw(graphics, partialTicks, mouseX, mouseY);
+
+        if (pageCount > 1 && menu.isReady() && inventory != null)
+        {
+            drawPageIndicator(graphics);
+        }
+    }
+
+    private boolean hasEmptySlot()
+    {
+        for (int i = 0; i < inventory.getSlots(); i++)
+        {
+            if (inventory.getStackInSlot(i).getCount() <= 0)
+                return true;
+        }
+        return false;
+    }
+
+    private void drawPageIndicator(GuiGraphics graphics)
+    {
+        int cx = width / 2;
+        int y = (int) (height / 2 + menu.radiusOut + 6);
+
+        // A row of dots, the current wheel highlighted
+        int dotSize = 4;
+        int spacing = 7;
+        int totalWidth = pageCount * spacing - (spacing - dotSize);
+        int x0 = cx - totalWidth / 2;
+        for (int p = 0; p < pageCount; p++)
+        {
+            int color = p == currentPage ? 0xFFFFFFFF : 0x80FFFFFF;
+            int x = x0 + p * spacing;
+            graphics.fill(x, y, x + dotSize, y + dotSize, color);
+        }
+
+        Component text = Component.translatable("text.toolbelt.page", currentPage + 1, pageCount);
+        graphics.drawString(font, text, cx - font.width(text) / 2, y + dotSize + 3, 0xFFFFFFFF, true);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY)
+    {
+        if (scrollY != 0 && changePage(scrollY > 0 ? -1 : 1))
+            return true;
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    /** Switches to the previous (-1) or next (+1) wheel, wrapping around. */
+    private boolean changePage(int direction)
+    {
+        if (pageCount <= 1 || !menu.isReady())
+            return false;
+
+        currentPage = Math.floorMod(currentPage + direction, pageCount);
+        lastPage = currentPage;
+        needsRecheckStacks = true;
+        return true;
     }
 
     private boolean trySwap(int slotNumber, ItemStack itemMouseOver)

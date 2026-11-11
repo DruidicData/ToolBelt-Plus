@@ -19,6 +19,10 @@ import java.util.Objects;
 public class BeltContainer extends AbstractContainerMenu
 {
     public final int beltSlots;
+    /** Number of rows (of up to 9 slots) the belt slots take up in the GUI. */
+    public final int beltRows;
+    /** Extra vertical space, in pixels, added for belt rows beyond the first. */
+    public final int extraHeight;
     private ItemStack blockedStack;
     private final int blockedSlot;
 
@@ -43,13 +47,23 @@ public class BeltContainer extends AbstractContainerMenu
         );
 
         beltSlots = beltInventory.getSlots();
-        int xoff = ((9 - beltSlots) * 18) / 2;
+        beltRows = Math.max(1, (beltSlots + 8) / 9);
+        extraHeight = (beltRows - 1) * 18;
         for (int k = 0; k < beltSlots; ++k)
         {
-            this.addSlot(new BeltSlot(playerInventory, blockedStack, blockedSlot, k, 8 + xoff + k * 18, 20));
+            int row = k / 9;
+            int col = k % 9;
+            int xoff = ((9 - slotsInRow(row)) * 18) / 2;
+            this.addSlot(new BeltSlot(playerInventory, blockedStack, blockedSlot, k, 8 + xoff + col * 18, 20 + row * 18));
         }
 
         bindPlayerInventory(playerInventory);
+    }
+
+    /** How many belt slots are in the given GUI row. */
+    public int slotsInRow(int row)
+    {
+        return Math.min(9, beltSlots - row * 9);
     }
 
     private void bindPlayerInventory(Container playerInventory)
@@ -61,8 +75,8 @@ public class BeltContainer extends AbstractContainerMenu
                 int index = j1 + l * 9 + 9;
                 this.addSlot(
                         blockedSlot == index
-                                ? new LockedSlot(playerInventory, index, 8 + j1 * 18, l * 18 + 51)
-                                : new Slot(playerInventory, index, 8 + j1 * 18, l * 18 + 51)
+                                ? new LockedSlot(playerInventory, index, 8 + j1 * 18, l * 18 + 51 + extraHeight)
+                                : new Slot(playerInventory, index, 8 + j1 * 18, l * 18 + 51 + extraHeight)
                 );
             }
         }
@@ -71,8 +85,8 @@ public class BeltContainer extends AbstractContainerMenu
         {
             this.addSlot(
                     blockedSlot == i1
-                            ? new LockedSlot(playerInventory, i1, 8 + i1 * 18, 109)
-                            : new Slot(playerInventory, i1, 8 + i1 * 18, 109)
+                            ? new LockedSlot(playerInventory, i1, 8 + i1 * 18, 109 + extraHeight)
+                            : new Slot(playerInventory, i1, 8 + i1 * 18, 109 + extraHeight)
             );
         }
     }

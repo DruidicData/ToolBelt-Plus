@@ -209,16 +209,21 @@ public class ToolBelt
 
 
     public static final int[] XP_COSTS = {3, 5, 8, 12, 15, 20, 30};
+    /** XP cost of every upgrade past the original 9 slots (kept below the vanilla "Too Expensive!" limit of 40). */
+    public static final int XP_COST_EXTRA_SLOTS = 30;
 
     public static int getUpgradeXP(ItemStack stack)
     {
         int slots = ToolBeltItem.getSlotsCount(stack);
 
-        if (slots >= 9)
+        if (slots >= ToolBeltItem.MAX_SLOTS)
             return -1;
 
         if (slots < 2)
             return 1;
+
+        if (slots - 2 >= XP_COSTS.length)
+            return XP_COST_EXTRA_SLOTS;
 
         return XP_COSTS[slots - 2];
     }
@@ -327,11 +332,11 @@ public class ToolBelt
                         SewingKitMod.DIAMOND_OR_HIGHER,
                         SewingKitMod.NETHERITE_OR_HIGHER
                 );
-                for (int i = 2; i < 9; i++)
+                for (int i = 2; i < ToolBeltItem.MAX_SLOTS; i++)
                 {
                     var beltId = ToolBelt.BELT.getId();
                     SewingUpgradeRecipe.builder(ToolBeltItem.of(i+1))
-                            .withTool(needleTiers.get(i-2))
+                            .withTool(needleTiers.get(Math.min(i-2, needleTiers.size()-1)))
                             .addMaterial(BeltIngredient.withLevel(i).toVanilla())
                             .addMaterial(Ingredient.of(POUCH.get()))
                             .addMaterial(Ingredient.of(Items.STRING))

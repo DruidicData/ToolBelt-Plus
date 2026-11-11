@@ -11,7 +11,9 @@ import mezz.jei.api.registration.IRecipeRegistration;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import mezz.jei.api.recipe.vanilla.IJeiAnvilRecipe;
 import java.util.List;
 
 @mezz.jei.api.JeiPlugin
@@ -32,15 +34,12 @@ public class JeiPlugin implements IModPlugin
         {
             IVanillaRecipeFactory vanillaFactory = registration.getVanillaRecipeFactory();
             List<ItemStack> pouch = Collections.singletonList(new ItemStack(ToolBelt.POUCH.get()));
-            registration.addRecipes(RecipeTypes.ANVIL, Lists.newArrayList(
-                    vanillaFactory.createAnvilRecipe(ToolBeltItem.of(0), pouch, Collections.singletonList(ToolBeltItem.of(1)), ToolBelt.location("upgrade_0_to_1")),
-                    vanillaFactory.createAnvilRecipe(ToolBeltItem.of(1), pouch, Collections.singletonList(ToolBeltItem.of(2)), ToolBelt.location("upgrade_1_to_2")),
-                    vanillaFactory.createAnvilRecipe(ToolBeltItem.of(2), pouch, Collections.singletonList(ToolBeltItem.of(3)), ToolBelt.location("upgrade_2_to_3")),
-                    vanillaFactory.createAnvilRecipe(ToolBeltItem.of(3), pouch, Collections.singletonList(ToolBeltItem.of(4)), ToolBelt.location("upgrade_3_to_4")),
-                    vanillaFactory.createAnvilRecipe(ToolBeltItem.of(4), pouch, Collections.singletonList(ToolBeltItem.of(5)), ToolBelt.location("upgrade_4_to_5")),
-                    vanillaFactory.createAnvilRecipe(ToolBeltItem.of(5), pouch, Collections.singletonList(ToolBeltItem.of(6)), ToolBelt.location("upgrade_5_to_6")),
-                    vanillaFactory.createAnvilRecipe(ToolBeltItem.of(6), pouch, Collections.singletonList(ToolBeltItem.of(7)), ToolBelt.location("upgrade_6_to_7"))
-            ));
+            List<IJeiAnvilRecipe> anvilRecipes = new ArrayList<>();
+            for (int i = 2; i < ToolBeltItem.MAX_SLOTS; i++)
+            {
+                anvilRecipes.add(vanillaFactory.createAnvilRecipe(ToolBeltItem.of(i), pouch, Collections.singletonList(ToolBeltItem.of(i + 1)), ToolBelt.location("upgrade_" + (i - 2) + "_to_" + (i - 1))));
+            }
+            registration.addRecipes(RecipeTypes.ANVIL, anvilRecipes);
         }
     }
 }

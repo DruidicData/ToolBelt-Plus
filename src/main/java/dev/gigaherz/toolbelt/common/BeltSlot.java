@@ -35,7 +35,7 @@ public class BeltSlot extends Slot
                 if (stack != beltStack)
                 {
                     beltStack = stack;
-                    inventory = (IItemHandlerModifiable)Objects.requireNonNullElse(stack.getCapability(Capabilities.ItemHandler.ITEM), new ItemStackHandler(9));
+                    inventory = (IItemHandlerModifiable)Objects.requireNonNullElse(stack.getCapability(Capabilities.ItemHandler.ITEM), new ItemStackHandler(dev.gigaherz.toolbelt.belt.ToolBeltItem.MAX_SLOTS));
                 }
                 return inventory;
             }

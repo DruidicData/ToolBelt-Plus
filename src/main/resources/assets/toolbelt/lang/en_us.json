@@ -11,5 +11,6 @@
   "text.toolbelt.insert": "INSERT",
   "text.toolbelt.extract": "EXTRACT",
   "text.toolbelt.tooltip": "Upgrades: %s (%s slots)",
+  "text.toolbelt.page": "Wheel %s/%s (scroll to switch)",
   "text.toolbelt": "Tool Belt"
 }

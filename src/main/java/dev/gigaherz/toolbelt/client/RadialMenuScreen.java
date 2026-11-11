@@ -85,7 +85,9 @@ public class RadialMenuScreen extends Screen
             @Override
             public boolean onClick()
             {
-                return RadialMenuScreen.this.trySwap(-1, ItemStack.EMPTY);
+                // Insert into the first empty slot of the wheel being shown, not anywhere in the belt
+                int slot = firstEmptySlotOnPage();
+                return slot >= 0 && RadialMenuScreen.this.trySwap(slot, ItemStack.EMPTY);
             }
         };
     }
@@ -198,23 +200,15 @@ public class RadialMenuScreen extends Screen
         {
             cachedMenuItems.clear();
 
-            // Work out which belt slots can appear on the wheels. When empty slots are hidden,
-            // only filled slots are paged through, so every wheel stays full.
-            List<Integer> shownSlots = Lists.newArrayList();
-            for (int i = 0; i < inventory.getSlots(); i++)
-            {
-                if (ConfigData.displayEmptySlots || inventory.getStackInSlot(i).getCount() > 0)
-                    shownSlots.add(i);
-            }
-
+            // Each wheel is a fixed block of belt slots (wheel 1 = slots 1-9, wheel 2 = 10-18, ...),
+            // so items placed on one wheel never move onto another. Empty slots are hidden per-wheel
+            // unless displayEmptySlots is enabled.
             int perWheel = ToolBeltItem.SLOTS_PER_WHEEL;
-            pageCount = Math.max(1, (shownSlots.size() + perWheel - 1) / perWheel);
+            pageCount = Math.max(1, (inventory.getSlots() + perWheel - 1) / perWheel);
             currentPage = Mth.clamp(currentPage, 0, pageCount - 1);
             lastPage = currentPage;
 
-            int first = currentPage * perWheel;
-            int last = Math.min(first + perWheel, shownSlots.size());
-            for (int i : shownSlots.subList(first, last))
+            for (int i = pageStart(); i < pageEnd(); i++)
             {
                 ItemStack inSlot = inventory.getStackInSlot(i);
                 ItemStackRadialMenuItem item = new ItemStackRadialMenuItem(menu, i, inSlot, Component.translatable("text.toolbelt.empty"))
@@ -251,7 +245,7 @@ public class RadialMenuScreen extends Screen
         }
 
         boolean hasAddButton = false;
-        if (!ConfigData.displayEmptySlots && inHand.getCount() > 0 && hasEmptySlot())
+        if (!ConfigData.displayEmptySlots && inHand.getCount() > 0 && firstEmptySlotOnPage() >= 0)
         {
             hasAddButton = true;
         }
@@ -277,14 +271,25 @@ public class RadialMenuScreen extends Screen
         }
     }
 
-    private boolean hasEmptySlot()
+    private int pageStart()
     {
-        for (int i = 0; i < inventory.getSlots(); i++)
+        return currentPage * ToolBeltItem.SLOTS_PER_WHEEL;
+    }
+
+    private int pageEnd()
+    {
+        return Math.min(pageStart() + ToolBeltItem.SLOTS_PER_WHEEL, inventory.getSlots());
+    }
+
+    /** Returns the belt slot index of the first empty slot on the current wheel, or -1 if it is full. */
+    private int firstEmptySlotOnPage()
+    {
+        for (int i = pageStart(); i < pageEnd(); i++)
         {
             if (inventory.getStackInSlot(i).getCount() <= 0)
-                return true;
+                return i;
         }
-        return false;
+        return -1;
     }
 
     private void drawPageIndicator(GuiGraphics graphics)

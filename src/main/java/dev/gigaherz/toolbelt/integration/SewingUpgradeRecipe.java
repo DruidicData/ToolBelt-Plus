@@ -85,7 +85,7 @@ public class SewingUpgradeRecipe extends SewingRecipe
             {
                 upgradedBelt.applyComponents(inputTag);
             }
-            ToolBeltItem.setBeltSize(upgradedBelt, Mth.clamp(size,2,9));
+            ToolBeltItem.setBeltSize(upgradedBelt, Mth.clamp(size,2,ToolBeltItem.MAX_SLOTS));
         }
         return upgradedBelt;
     }

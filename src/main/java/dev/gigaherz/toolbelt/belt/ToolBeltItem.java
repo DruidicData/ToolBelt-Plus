@@ -37,6 +37,13 @@ import java.util.function.Consumer;
 
 public class ToolBeltItem extends Item implements IBeltSlotItem
 {
+    /** Number of slots shown on each radial wheel (and per row in the belt GUI). */
+    public static final int SLOTS_PER_WHEEL = 9;
+    /** Number of wheels a fully-upgraded belt has. */
+    public static final int MAX_WHEELS = 4;
+    /** Maximum number of slots a belt can be upgraded to. */
+    public static final int MAX_SLOTS = SLOTS_PER_WHEEL * MAX_WHEELS;
+
     public static void register(RegisterCapabilitiesEvent event)
     {
         event.registerItem(
@@ -95,13 +102,13 @@ public class ToolBeltItem extends Item implements IBeltSlotItem
 
     public ItemStack forSize(int size)
     {
-        return setBeltSize(new ItemStack(this), Math.clamp(size,2,9));
+        return setBeltSize(new ItemStack(this), Math.clamp(size,2,MAX_SLOTS));
     }
 
     public static int getBeltSize(ItemStack stack)
     {
         var count = Objects.requireNonNullElse(stack.get(ToolBelt.BELT_SIZE), 2);
-        return Math.clamp(count, 2, 9);
+        return Math.clamp(count, 2, MAX_SLOTS);
     }
 
     public static ItemStack setBeltSize(ItemStack stack, int newSize)
@@ -195,7 +202,7 @@ public class ToolBeltItem extends Item implements IBeltSlotItem
     {
         int slots = getBeltSize(stack);
 
-        if (slots >= 9)
+        if (slots >= MAX_SLOTS)
             return stack.copy();
 
         stack = stack.copy();

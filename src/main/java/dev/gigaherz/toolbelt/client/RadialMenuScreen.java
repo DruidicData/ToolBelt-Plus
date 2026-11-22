@@ -15,6 +15,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -53,6 +54,11 @@ public class RadialMenuScreen extends Screen
 
     private boolean keyCycleBeforeL = false;
     private boolean keyCycleBeforeR = false;
+
+    /** Remembered between openings so the menu reopens on the last wheel used. */
+    private static int lastPage = 0;
+    private int currentPage = lastPage;
+    private int pageCount = 1;
 
     private boolean needsRecheckStacks = true;
     private final List<ItemStackRadialMenuItem> cachedMenuItems = Lists.newArrayList();
@@ -100,7 +106,9 @@ public class RadialMenuScreen extends Screen
             @Override
             public boolean onClick()
             {
-                return RadialMenuScreen.this.trySwap(-1, ItemStack.EMPTY);
+                // Insert into the first empty slot of the wheel being shown, not anywhere in the belt
+                int slot = firstEmptySlotOnPage();
+                return slot >= 0 && RadialMenuScreen.this.trySwap(slot, ItemStack.EMPTY);
             }
         };
     }
@@ -202,7 +210,16 @@ public class RadialMenuScreen extends Screen
                 var inventory = new ItemContainerWrapper(inv0, inventorySize, stackEquipped, getter);
 
                 cachedMenuItems.clear();
-                for (int i = 0; i < inventorySize; i++)
+
+                // Each wheel is a fixed block of belt slots (wheel 1 = slots 1-9, wheel 2 = 10-18, ...),
+                // so items placed on one wheel never move onto another. Empty slots are hidden per-wheel
+                // unless displayEmptySlots is enabled.
+                int perWheel = ToolBeltItem.SLOTS_PER_WHEEL;
+                pageCount = Math.max(1, (inventorySize + perWheel - 1) / perWheel);
+                currentPage = Mth.clamp(currentPage, 0, pageCount - 1);
+                lastPage = currentPage;
+
+                for (int i = pageStart(); i < pageEnd(); i++)
                 {
                     ItemStack inSlot = i < inventory.getContainerSize() ? inventory.getItem(i) : ItemStack.EMPTY;
                     ItemStackRadialMenuItem item = getMenuItemForStack(i, inSlot, inHand);
@@ -217,7 +234,7 @@ public class RadialMenuScreen extends Screen
             }
 
             boolean hasAddButton = false;
-            if (!ConfigData.displayEmptySlots && !cachedMenuItems.stream().allMatch(RadialMenuItem::isVisible) && inHand.getCount() > 0)
+            if (!ConfigData.displayEmptySlots && inHand.getCount() > 0 && firstEmptySlotOnPage() >= 0)
             {
                 hasAddButton = true;
             }
@@ -236,6 +253,73 @@ public class RadialMenuScreen extends Screen
         }
 
         menu.extractRenderState(graphics, partialTicks, mouseX, mouseY);
+
+        if (pageCount > 1 && menu.isReady() && stackEquipped != null)
+        {
+            extractPageIndicator(graphics);
+        }
+    }
+
+    private int pageStart()
+    {
+        return currentPage * ToolBeltItem.SLOTS_PER_WHEEL;
+    }
+
+    private int pageEnd()
+    {
+        return Math.min(pageStart() + ToolBeltItem.SLOTS_PER_WHEEL, inventorySize);
+    }
+
+    /** Returns the belt slot index of the first empty slot on the current wheel, or -1 if it is full. */
+    private int firstEmptySlotOnPage()
+    {
+        for (ItemStackRadialMenuItem item : cachedMenuItems)
+        {
+            if (item.getStack().isEmpty())
+                return item.getSlot();
+        }
+        return -1;
+    }
+
+    private void extractPageIndicator(GuiGraphicsExtractor graphics)
+    {
+        int cx = width / 2;
+        int y = (int) (height / 2 + menu.radiusOut + 6);
+
+        // A row of dots, the current wheel highlighted
+        int dotSize = 4;
+        int spacing = 7;
+        int totalWidth = pageCount * spacing - (spacing - dotSize);
+        int x0 = cx - totalWidth / 2;
+        for (int p = 0; p < pageCount; p++)
+        {
+            int color = p == currentPage ? 0xFFFFFFFF : 0x80FFFFFF;
+            int x = x0 + p * spacing;
+            graphics.fill(x, y, x + dotSize, y + dotSize, color);
+        }
+
+        Component text = Component.translatable("text.toolbelt.page", currentPage + 1, pageCount);
+        graphics.text(font, text, cx - font.width(text) / 2, y + dotSize + 3, 0xFFFFFFFF, true);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY)
+    {
+        if (scrollY != 0 && changePage(scrollY > 0 ? -1 : 1))
+            return true;
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    /** Switches to the previous (-1) or next (+1) wheel, wrapping around. */
+    private boolean changePage(int direction)
+    {
+        if (pageCount <= 1 || !menu.isReady())
+            return false;
+
+        currentPage = Math.floorMod(currentPage + direction, pageCount);
+        lastPage = currentPage;
+        needsRecheckStacks = true;
+        return true;
     }
 
     private @NotNull ItemStackRadialMenuItem getMenuItemForStack(int i, ItemStack inSlot, ItemStack inHand)

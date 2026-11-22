@@ -26,6 +26,10 @@ public class BeltContainer extends AbstractContainerMenu implements BeltFinder.B
     private final int blockedSlot;
     private ItemStack blockedStack;
     public int inventorySize = 0;
+    /** Number of rows (of up to 9 slots) the belt slots take up in the GUI. */
+    public int beltRows = 1;
+    /** Extra vertical space, in pixels, added for belt rows beyond the first. */
+    public int extraHeight = 0;
 
     public BeltContainer(int id, Inventory inventory, RegistryFriendlyByteBuf extraData)
     {
@@ -51,10 +55,14 @@ public class BeltContainer extends AbstractContainerMenu implements BeltFinder.B
             this.inventorySize = ToolBeltItem.getBeltSize(actualStack);
             var wrapper = new ItemContainerWrapper(inventory, inventorySize, actualStack, this);
 
-            int xoff = ((9 - inventorySize) * SLOT_SIZE) / 2;
+            this.beltRows = Math.max(1, (inventorySize + SLOTS_PER_ROW - 1) / SLOTS_PER_ROW);
+            this.extraHeight = (beltRows - 1) * SLOT_SIZE;
             for (int k = 0; k < inventorySize; ++k)
             {
-                this.addSlot(new Slot(wrapper, k, PLAYER_INV_LEFT + xoff + k * SLOT_SIZE, 20)
+                int row = k / SLOTS_PER_ROW;
+                int column = k % SLOTS_PER_ROW;
+                int xoff = ((SLOTS_PER_ROW - slotsInRow(row)) * SLOT_SIZE) / 2;
+                this.addSlot(new Slot(wrapper, k, PLAYER_INV_LEFT + xoff + column * SLOT_SIZE, 20 + row * SLOT_SIZE)
                 {
 
                     @Override
@@ -69,6 +77,12 @@ public class BeltContainer extends AbstractContainerMenu implements BeltFinder.B
         }
     }
 
+    /** How many belt slots are in the given GUI row. */
+    public int slotsInRow(int row)
+    {
+        return Math.min(SLOTS_PER_ROW, inventorySize - row * SLOTS_PER_ROW);
+    }
+
     private void bindPlayerInventory(Container playerInventory)
     {
         for (int row = 0; row < 3; ++row)
@@ -77,7 +91,7 @@ public class BeltContainer extends AbstractContainerMenu implements BeltFinder.B
             {
                 int index = column + (row + 1) * SLOTS_PER_ROW;
                 int x = PLAYER_INV_LEFT + column * SLOT_SIZE;
-                int y = row * SLOT_SIZE + PLAYER_INV_TOP;
+                int y = row * SLOT_SIZE + PLAYER_INV_TOP + extraHeight;
                 this.addSlot(blockedSlot == index
                                 ? new LockedSlot(playerInventory, index, x, y)
                                 : new Slot(playerInventory, index, x, y)
@@ -89,8 +103,8 @@ public class BeltContainer extends AbstractContainerMenu implements BeltFinder.B
         {
             int x = PLAYER_INV_LEFT + column * SLOT_SIZE;
             this.addSlot(blockedSlot == column
-                            ? new LockedSlot(playerInventory, column, x, HOTBAR_TOP)
-                            : new Slot(playerInventory, column, x, HOTBAR_TOP)
+                            ? new LockedSlot(playerInventory, column, x, HOTBAR_TOP + extraHeight)
+                            : new Slot(playerInventory, column, x, HOTBAR_TOP + extraHeight)
             );
         }
     }

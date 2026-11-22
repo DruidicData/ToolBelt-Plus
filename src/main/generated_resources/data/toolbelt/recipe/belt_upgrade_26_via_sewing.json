@@ -1,0 +1,38 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "sewingkit"
+    },
+    {
+      "type": "toolbelt:enable_sewing_crafting"
+    }
+  ],
+  "type": "toolbelt:sewing_upgrade",
+  "category": "sewingkit:sewing_misc",
+  "group": "toolbelt_belt_upgrade",
+  "materials": [
+    {
+      "count": 1,
+      "ingredient": {
+        "neoforge:ingredient_type": "toolbelt:belt_upgrade_level",
+        "size": 27
+      }
+    },
+    {
+      "count": 1,
+      "ingredient": "toolbelt:pouch"
+    },
+    {
+      "count": 1,
+      "ingredient": "minecraft:string"
+    }
+  ],
+  "result": {
+    "components": {
+      "toolbelt:belt_size": 28
+    },
+    "id": "toolbelt:belt"
+  },
+  "tool": "#sewingkit:needles/netherite_or_higher"
+}
